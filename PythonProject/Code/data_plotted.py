@@ -4,7 +4,7 @@ import json
 import plotly.express as px
 
 # 1. Load your RSA data
-df = pd.read_csv("C:/Users/ciara/PycharmProjects/PythonProject/driving_test_data.csv")
+df = pd.read_csv("/driving_test_data.csv")
 
 # 2. Extract county from 'Driving Test Centre'
 def extract_county(text):
@@ -19,7 +19,7 @@ county_pass_rate = (
 )
 
 # 4. Load the SIMPLE Ireland counties GeoJSON (from SimpleMaps)
-with open("C:/Users/ciara/PycharmProjects/PythonProject/ie.json") as f:
+with open("/ie.json") as f:
     ireland_counties = json.load(f)
 
 # Check a property's keys once (optional)
