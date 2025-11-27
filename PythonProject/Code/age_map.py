@@ -2,8 +2,14 @@ import pandas as pd
 import re
 import json
 import plotly.express as px
+from pathlib import Path
 
-df_age = pd.read_csv("C:/Users/ciara/PycharmProjects/PythonProject/Average_Age_Per_County.cleaned.csv")
+# Set base directory to project root
+BASE_DIR = Path(__file__).resolve().parent.parent
+csv_path = BASE_DIR / "Average_Age_Per_County.cleaned.csv"
+geojson_path = BASE_DIR / "ie.json"
+
+df_age = pd.read_csv(csv_path)
 
 df_age["County"] = df_age["County and State"].str.replace(" City", "").str.replace(" County", "").str.strip()
 
@@ -13,7 +19,7 @@ county_age = (
 )
 
 
-with open("C:/Users/ciara/PycharmProjects/PythonProject/ie.json") as f:
+with open(geojson_path) as f:
     ireland_counties = json.load(f)
 
 # Check a property's keys once (optional)
