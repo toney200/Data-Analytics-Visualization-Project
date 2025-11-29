@@ -56,8 +56,6 @@ fig = px.scatter(
 
 # Update layout
 fig.update_layout(
-    xaxis_title="Average Age",
-    yaxis_title="Pass Rate (%)",
     showlegend=False,
     margin={"r":20, "t":50, "l":20, "b":20}
 )
