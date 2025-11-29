@@ -45,22 +45,18 @@ for i, year in enumerate(years):
                       'Pass Rate: %{y:.2f}%<extra></extra>'
     ))
 
-# Update layout
+# Update layout to match the center chart style
 fig.update_layout(
-    title='Driving Test Pass Rates by Month and Year<br><sub>(All Driving Test Centres)</sub>',
+    title='Driving Test Pass Rates by Month and Year',
     xaxis_title='Month',
     yaxis_title='Pass Rate (%)',
     yaxis=dict(range=[0, 100]),
     xaxis=dict(tickangle=45),
     showlegend=True,
     legend=dict(title='Year'),
-    height=500,
-    margin={"r":20, "t":80, "l":20, "b":100}
+    height=600,
+    margin={"r":20, "t":60, "l":50, "b":50}
 )
-
-# Add grid
-fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.3)')
-fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.3)')
 
 # Show the plot
 fig.show()
