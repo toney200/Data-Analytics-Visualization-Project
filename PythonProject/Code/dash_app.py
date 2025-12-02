@@ -181,7 +181,7 @@ app.layout = html.Div(
 )
 
 # --------------------------------------------------
-# 3. Callbacks
+# Callbacks
 # --------------------------------------------------
 
 @app.callback(
@@ -201,9 +201,8 @@ def update_scatter(age_range):
 
 
 # --------------------------------------------------
-# 4. Entrypoint
+# Entrypoint
 # --------------------------------------------------
 
 if __name__ == "__main__":
-    # Run with: python dash_app.py
-    app.run_server(debug=True)
+    app.run(debug=True)
