@@ -59,7 +59,7 @@ county_age = (
 )
 
 # -----------------------------
-# County test counts
+# County test counts with population normalization
 # -----------------------------
 df_driving_tests = df_driving.dropna(subset=["County", "Number of Tests"])
 county_tests = (
@@ -74,6 +74,11 @@ county_tests = (
 df_population['County'] = df_population['County'].str.replace('Co. ', '', regex=False)
 df_population['Population'] = df_population['VALUE'] * 1000  # Convert from thousands
 population_lookup = df_population[df_population['County'] != 'Ireland'].set_index('County')['Population'].to_dict()
+
+# Add population data to county tests for the map
+county_tests['Population'] = county_tests['County'].map(population_lookup)
+county_tests = county_tests.dropna(subset=['Population'])
+county_tests['Tests_per_1000'] = (county_tests['Number of Tests'] / county_tests['Population']) * 1000
 
 # -----------------------------
 # Merge for scatter Age vs Pass Rate with population
@@ -173,17 +178,19 @@ fig_age_map.update_geos(fitbounds="geojson", visible=False)
 fig_age_map.update_layout(margin=dict(l=0, r=0, t=50, b=0))
 
 # ------------------------------------------------------
-# FIG 4: Number of Tests Map
-# (from tests_map.py)
+# FIG 4: Tests per 1,000 Population Map
+# (from tests_map.py - population normalized)
 # ------------------------------------------------------
 fig_tests_map = px.choropleth(
     county_tests,
     geojson=geojson,
     locations="County_key",
     featureidkey=f"properties.{GEO_KEY}",
-    color="Number of Tests",
+    color="Tests_per_1000",
     color_continuous_scale="Blues",
-    title="Total Number of Driving Tests by County"
+    labels={"Tests_per_1000": "Tests per 1,000 Population"},
+    hover_data={"Number of Tests": True, "Population": ":,.0f"},
+    title="Driving Tests per 1,000 Population by County"
 )
 fig_tests_map.update_geos(fitbounds="geojson", visible=False)
 fig_tests_map.update_layout(margin=dict(l=0, r=0, t=50, b=0))

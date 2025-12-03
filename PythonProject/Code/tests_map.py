@@ -8,9 +8,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 csv_path = BASE_DIR / "ROA30.20251112T121150_cleaned.csv"
 geojson_path = BASE_DIR / "ie.json"
+population_path = BASE_DIR / "PEA08.20251203T161259.csv"
 
-# Read the driving test data
+# Read the driving test data and population data
 df = pd.read_csv(csv_path)
+df_population = pd.read_csv(population_path)
 
 # Extract county from 'Driving Test Centre'
 def extract_county(text):
@@ -27,6 +29,18 @@ county_tests = (
     df_clean.groupby("County", as_index=False)["Number of Tests"].sum()
 )
 
+# Prepare population data
+df_population['County'] = df_population['County'].str.replace('Co. ', '', regex=False)
+df_population['Population'] = df_population['VALUE'] * 1000  # Convert from thousands
+population_lookup = df_population[df_population['County'] != 'Ireland'].set_index('County')['Population'].to_dict()
+
+# Add population data to county tests
+county_tests['Population'] = county_tests['County'].map(population_lookup)
+county_tests = county_tests.dropna(subset=['Population'])
+
+# Calculate tests per 1,000 population
+county_tests['Tests_per_1000'] = (county_tests['Number of Tests'] / county_tests['Population']) * 1000
+
 # Load the Ireland counties GeoJSON
 with open(geojson_path) as f:
     ireland_counties = json.load(f)
@@ -40,15 +54,16 @@ geojson_county_field = "name"
 # Make our county labels match the GeoJSON naming
 county_tests["County_key"] = county_tests["County"].str.title().str.strip()
 
-# Create choropleth map
+# Create choropleth map using tests per 1,000 population
 fig = px.choropleth(
     county_tests,
     geojson=ireland_counties,
     locations="County_key",
     featureidkey=f"properties.{geojson_county_field}",
-    color="Number of Tests",
+    color="Tests_per_1000",
     color_continuous_scale="Blues",
-    labels={"Number of Tests": "Total Number of Tests"},
+    labels={"Tests_per_1000": "Tests per 1,000 Population"},
+    hover_data={"Number of Tests": True, "Population": ":,.0f"}
 )
 
 fig.update_geos(
@@ -57,7 +72,7 @@ fig.update_geos(
 )
 
 fig.update_layout(
-    title="Total Number of Driving Tests per County in Ireland",
+    title="Driving Tests per 1,000 Population by County in Ireland",
     margin={"r":0, "t":50, "l":0, "b":0}
 )
 
