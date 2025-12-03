@@ -62,10 +62,3 @@ fig.update_layout(
 
 # Show the plot
 fig.show()
-
-# Print summary statistics
-print(f"\nDataset Summary:")
-print(f"Number of counties with both datasets: {len(merged_data)}")
-print(f"\nCorrelation between Average Age and Pass Rate: {merged_data['Average_Age'].corr(merged_data['Pass Rate']):.3f}")
-print("\nMerged data preview:")
-print(merged_data.head())
