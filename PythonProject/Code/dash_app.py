@@ -18,9 +18,11 @@ driving_path = BASE_DIR / "driving_test_data.csv"
 age_path = BASE_DIR / "Average_Age_Per_County.cleaned.csv"
 geo_path = BASE_DIR / "ie.json"
 driving_monthly_path = BASE_DIR / "ROA30.20251112T121150_cleaned.csv"
+population_path = BASE_DIR / "PEA08.20251203T161259.csv"
 
 df_driving = pd.read_csv(driving_path)
 df_age = pd.read_csv(age_path)
+df_population = pd.read_csv(population_path)
 
 # Extract county (consistent with multiple scripts)
 def extract_county(text):
@@ -67,15 +69,35 @@ county_tests = (
 )
 
 # -----------------------------
-# Merge for scatter Age vs Pass Rate
+# Prepare population data
 # -----------------------------
-merged_age_pass = pd.merge(county_pass, county_age, on="County", how="inner")
-merged_age_pass = merged_age_pass.rename(columns={"VALUE": "Average_Age"})
+df_population['County'] = df_population['County'].str.replace('Co. ', '', regex=False)
+df_population['Population'] = df_population['VALUE'] * 1000  # Convert from thousands
+population_lookup = df_population[df_population['County'] != 'Ireland'].set_index('County')['Population'].to_dict()
 
 # -----------------------------
-# Merge for Pass Rate vs Number of Tests (county)
+# Merge for scatter Age vs Pass Rate with population
+# -----------------------------
+merged_age_pass = pd.merge(county_pass, county_age, on="County", how="inner")
+merged_age_pass['Population'] = merged_age_pass['County'].map(population_lookup)
+merged_age_pass = merged_age_pass.dropna(subset=['Population'])
+merged_age_pass = merged_age_pass.rename(columns={"VALUE": "Average_Age"})
+
+# Calculate normalized opacity based on population (0.3 to 1.0 range)
+min_pop = merged_age_pass['Population'].min()
+max_pop = merged_age_pass['Population'].max()
+merged_age_pass['Opacity'] = 0.3 + 0.7 * (merged_age_pass['Population'] - min_pop) / (max_pop - min_pop)
+
+# -----------------------------
+# Merge for Pass Rate vs Number of Tests (county) with population normalization
 # -----------------------------
 county_pass_tests = pd.merge(county_pass, county_tests, on="County", how="inner")
+county_pass_tests['Population'] = county_pass_tests['County'].map(population_lookup)
+county_pass_tests = county_pass_tests.dropna(subset=['Population'])
+county_pass_tests = county_pass_tests[county_pass_tests['Number of Tests'] >= 50]
+
+# Calculate normalized metrics per thousand population
+county_pass_tests['Tests_per_1000'] = (county_pass_tests['Number of Tests'] / county_pass_tests['Population']) * 1000
 
 
 # ======================================================
@@ -100,16 +122,23 @@ county_tests["County_key"] = county_tests["County"].apply(geo_key_clean)
 # ======================================================
 
 # ------------------------------------------------------
-# FIG 1: Scatter — Pass Rate vs Average Age
+# FIG 1: Scatter — Pass Rate vs Average Age (Population Normalized)
 # ------------------------------------------------------
 fig_scatter_age = px.scatter(
     merged_age_pass,
     x="Average_Age",
     y="Pass Rate",
-    hover_data=["County"],
-    title="Pass Rate vs Average Age (County Level)",
+    hover_data=["County", "Population"],
+    labels={
+        "Average_Age": "Average Age",
+        "Pass Rate": "Pass Rate (%)"
+    },
+    title="Pass Rate vs Average Age by County (Opacity = Population)",
     trendline="ols"
 )
+
+# Update marker opacity based on population
+fig_scatter_age.update_traces(marker=dict(opacity=merged_age_pass['Opacity']))
 fig_scatter_age.update_layout(margin=dict(l=20, r=20, t=40, b=20))
 
 # ------------------------------------------------------
@@ -160,15 +189,29 @@ fig_tests_map.update_geos(fitbounds="geojson", visible=False)
 fig_tests_map.update_layout(margin=dict(l=0, r=0, t=50, b=0))
 
 # ------------------------------------------------------
-# FIG 5: Pass Rate vs Number of Tests (county-level)
+# FIG 5: Pass Rate vs Tests per 1,000 Population (Population Normalized)
 # ------------------------------------------------------
 fig_pass_vs_tests = px.scatter(
     county_pass_tests,
-    x="Number of Tests",
+    x="Tests_per_1000",
     y="Pass Rate",
-    hover_data=["County"],
+    hover_data=["County", "Number of Tests", "Population"],
+    labels={
+        "Tests_per_1000": "Tests per 1,000 Population",
+        "Pass Rate": "Pass Rate (%)"
+    },
     trendline="ols",
-    title="Pass Rate vs Number of Tests (County Level)"
+    title="Pass Rate vs Tests per 1,000 Population by County"
+)
+
+# Update hover template for better information display
+fig_pass_vs_tests.update_traces(
+    hovertemplate='<b>%{customdata[0]}</b><br>' +
+                  'Tests per 1,000: %{x:.1f}<br>' +
+                  'Pass Rate: %{y:.1f}%<br>' +
+                  'Total Tests: %{customdata[1]:,}<br>' +
+                  'Population: %{customdata[2]:,.0f}<extra></extra>',
+    selector=dict(mode='markers')
 )
 fig_pass_vs_tests.update_layout(margin=dict(l=20, r=20, t=40, b=20))
 
